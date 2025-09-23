@@ -8,7 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { adminAPI } from '@/services/api';
 import { MemberDetails } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, XCircle, Eye } from 'lucide-react';
+import { CheckCircle, XCircle, Eye, FileText, Image, User as UserIcon } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const AdminPendingProfiles: React.FC = () => {
   const [profiles, setProfiles] = useState<MemberDetails[]>([]);
@@ -17,6 +19,8 @@ const AdminPendingProfiles: React.FC = () => {
   const [selectedProfile, setSelectedProfile] = useState<MemberDetails | null>(null);
   const [ipiNumber, setIpiNumber] = useState('');
   const [rejectionNotes, setRejectionNotes] = useState('');
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewDocs, setReviewDocs] = useState<any | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -101,6 +105,23 @@ const AdminPendingProfiles: React.FC = () => {
     }
   };
 
+  const openReview = async (profile: MemberDetails) => {
+    try {
+      setSelectedProfile(profile);
+      setReviewDocs(null);
+      setReviewOpen(true);
+      // Fetch documents + profile using admin endpoint
+      const docs = await adminAPI.getUserDocuments(profile.user.id);
+      setReviewDocs(docs);
+    } catch (error: any) {
+      toast({
+        title: 'Failed to load documents',
+        description: error?.response?.data || 'Error fetching user documents',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout title="Pending Profiles">
@@ -167,11 +188,11 @@ const AdminPendingProfiles: React.FC = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setSelectedProfile(profile)}
+                      onClick={() => openReview(profile)}
                       className="flex-1"
                     >
                       <Eye className="h-4 w-4 mr-2" />
-                      Review
+                      View Profile
                     </Button>
                     <Button
                       variant="outline"
@@ -200,93 +221,101 @@ const AdminPendingProfiles: React.FC = () => {
           </div>
         )}
 
-        {/* Approval Modal */}
-        {selectedProfile && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <Card className="w-full max-w-md">
-              <CardHeader>
-                <CardTitle>Approve Profile</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="ipiNumber">IPI Number *</Label>
-                  <Input
-                    id="ipiNumber"
-                    value={ipiNumber}
-                    onChange={(e) => setIpiNumber(e.target.value)}
-                    placeholder="Enter IPI number"
-                    required
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => handleApprove(selectedProfile)}
-                    disabled={processing === selectedProfile.id}
-                    className="flex-1"
-                  >
-                    {processing === selectedProfile.id ? 'Processing...' : 'Approve'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedProfile(null);
-                      setIpiNumber('');
-                    }}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Rejection Modal */}
-        {selectedProfile && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <Card className="w-full max-w-md">
-              <CardHeader>
-                <CardTitle>Reject Profile</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="rejectionNotes">Rejection Notes *</Label>
-                  <Input
-                    id="rejectionNotes"
-                    value={rejectionNotes}
-                    onChange={(e) => setRejectionNotes(e.target.value)}
-                    placeholder="Enter rejection reason"
-                    required
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleReject(selectedProfile)}
-                    disabled={processing === selectedProfile.id}
-                    className="flex-1"
-                  >
-                    {processing === selectedProfile.id ? 'Processing...' : 'Reject'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedProfile(null);
-                      setRejectionNotes('');
-                    }}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        <ReviewDialog open={reviewOpen} onOpenChange={setReviewOpen} profile={selectedProfile} docs={reviewDocs} />
       </div>
     </DashboardLayout>
   );
 };
 
 export default AdminPendingProfiles;
+ 
+// Review Dialog UI
+// Note: Injected at file bottom to keep component concise
+function ReviewDialog({ open, onOpenChange, profile, docs }: { open: boolean; onOpenChange: (v: boolean) => void; profile: MemberDetails | null; docs: any }) {
+  if (!profile) return null as any;
+  const status = profile.status?.statusName || 'PENDING';
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Artist Submission Review</DialogTitle>
+        </DialogHeader>
+        <Tabs defaultValue="profile">
+          <TabsList>
+            <TabsTrigger value="profile">
+              <UserIcon /> Profile
+            </TabsTrigger>
+            <TabsTrigger value="documents">
+              <FileText className="h-4 w-4 mr-1" /> Documents
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="profile">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>First Name</Label>
+                <Input value={profile.firstName} disabled />
+              </div>
+              <div>
+                <Label>Surname</Label>
+                <Input value={profile.surname} disabled />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <Input value={profile.email} disabled />
+              </div>
+              <div>
+                <Label>Phone</Label>
+                <Input value={profile.phoneNumber} disabled />
+              </div>
+              <div>
+                <Label>Artist ID</Label>
+                <Input value={(profile as any).ArtistId || (profile as any).artistId || '-'} disabled />
+              </div>
+              <div>
+                <Label>IPI Number</Label>
+                <Input value={(profile as any).IPI_number || (profile as any).ipiNumber || '-'} disabled />
+              </div>
+              <div className="md:col-span-2">
+                <Label>Status</Label>
+                <Input value={status} disabled />
+              </div>
+            </div>
+          </TabsContent>
+          <TabsContent value="documents">
+            <div className="space-y-4">
+              {docs?.passportphoto || docs?.passportPhoto ? (
+                <DocRow
+                  title="Passport Photo"
+                  url={(docs.passportphoto || docs.passportPhoto).imageUrl}
+                />
+              ) : null}
+              {docs?.idDocument ? (
+                <DocRow title="ID Document" url={docs.idDocument.fileUrl} />
+              ) : null}
+              {docs?.bankConfirmationLetter ? (
+                <DocRow title="Bank Confirmation Letter" url={docs.bankConfirmationLetter.fileUrl} />
+              ) : null}
+              {docs?.proofOfPayment ? (
+                <DocRow title="Proof Of Payment" url={docs.proofOfPayment.fileUrl} />
+              ) : null}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DocRow({ title, url }: { title: string; url: string }) {
+  return (
+    <div className="flex items-center justify-between p-3 rounded border">
+      <div className="flex items-center gap-2">
+        <Image className="h-4 w-4" />
+        <span className="font-medium">{title}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={() => window.open(url, '_blank')}>View</Button>
+      </div>
+    </div>
+  );
+}
