@@ -281,11 +281,11 @@ const ArtistDashboard: React.FC = () => {
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <span className="text-sm text-muted-foreground">IPI Number</span>
-                <div className="text-lg font-semibold">{profile.ipiNumber || '-'}</div>
+                <div className="text-lg font-semibold">{(profile as any).IPI_number || (profile as any).ipiNumber || '-'}</div>
               </div>
               <div>
                 <span className="text-sm text-muted-foreground">Artist ID</span>
-                <div className="text-lg font-semibold">{profile.artistId || '-'}</div>
+                <div className="text-lg font-semibold">{(profile as any).ArtistId || (profile as any).artistId || '-'}</div>
               </div>
             </CardContent>
           </Card>

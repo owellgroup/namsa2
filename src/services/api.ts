@@ -133,6 +133,67 @@ export const artistAPI = {
     return response.data;
   },
 
+  // Documents update/delete for authenticated user
+  updatePassportPhotoByUser: async (file: File, imageTitle: string): Promise<PassportPhoto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('imageTitle', imageTitle);
+    const response = await api.put('/api/artist2/updatephotobyuser', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  deletePassportPhotoByUser: async (): Promise<{ message: string }> => {
+    const response = await api.delete('/api/artist2/deleteuserphoto');
+    return response.data;
+  },
+
+  updateProofOfPaymentByUser: async (file: File, documentTitle: string): Promise<any> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentTitle', documentTitle);
+    const response = await api.put('/api/artist2/updateproofofpayuser', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  deleteProofOfPaymentByUser: async (): Promise<{ message: string }> => {
+    const response = await api.delete('/api/artist2/deleteproofofpay');
+    return response.data;
+  },
+
+  updateBankLetterByUser: async (file: File, documentTitle: string): Promise<any> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentTitle', documentTitle);
+    const response = await api.put('/api/artist2/updatebankletteruser', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  deleteBankLetterByUser: async (): Promise<{ message: string }> => {
+    const response = await api.delete('/api/artist2/deletebankletteruser');
+    return response.data;
+  },
+
+  updateIdDocumentByUser: async (file: File, documentTitle: string): Promise<any> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentTitle', documentTitle);
+    const response = await api.put('/api/artist2/updatiddocbyuser', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  deleteIdDocumentByUser: async (): Promise<{ message: string }> => {
+    const response = await api.delete('/api/artist2/deleteuseriddoc');
+    return response.data;
+  },
+
   // Upload Passport Photo - matches ApiGuide.md exactly
   uploadPassportPhoto: async (file: File, imageTitle: string): Promise<PassportPhoto> => {
     const formData = new FormData();
@@ -186,10 +247,10 @@ export const artistAPI = {
     // Append all other fields if they exist
     if (musicData.albumName) formData.append('albumName', musicData.albumName);
     if (musicData.artist) formData.append('artist', musicData.artist);
-    if (musicData.groupOrBandOrStageName) formData.append('groupOrBandOrStageName', musicData.groupOrBandOrStageName);
+    if (musicData.groupOrBandOrStageName) formData.append('GroupOrBandOrStageName', musicData.groupOrBandOrStageName);
     if (musicData.featuredArtist) formData.append('featuredArtist', musicData.featuredArtist);
     if (musicData.producer) formData.append('producer', musicData.producer);
-    if (musicData.duration) formData.append('duration', musicData.duration);
+    if (musicData.duration) formData.append('Duration', musicData.duration);
     if (musicData.country) formData.append('country', musicData.country);
     if (musicData.artistUploadTypeId) formData.append('artistUploadTypeId', musicData.artistUploadTypeId.toString());
     if (musicData.artistWorkTypeId) formData.append('artistWorkTypeId', musicData.artistWorkTypeId.toString());
@@ -198,14 +259,13 @@ export const artistAPI = {
     if (musicData.arranger) formData.append('arranger', musicData.arranger);
     if (musicData.publisher) formData.append('publisher', musicData.publisher);
     if (musicData.publishersName) formData.append('publishersName', musicData.publishersName);
-    if (musicData.publisherAddress) formData.append('publisherAddress', musicData.publisherAddress);
+    if (musicData.publisherAddress) formData.append('publisherAdress', musicData.publisherAddress);
     if (musicData.publisherTelephone) formData.append('publisherTelephone', musicData.publisherTelephone);
     if (musicData.recordedBy) formData.append('recordedBy', musicData.recordedBy);
-    if (musicData.addressOfRecordingCompany) formData.append('addressOfRecordingCompany', musicData.addressOfRecordingCompany);
+    if (musicData.addressOfRecordingCompany) formData.append('AddressOfRecordingCompany', musicData.addressOfRecordingCompany);
     if (musicData.recordingCompanyTelephone) formData.append('recordingCompanyTelephone', musicData.recordingCompanyTelephone);
     if (musicData.labelName) formData.append('labelName', musicData.labelName);
     if (musicData.dateRecorded) formData.append('dateRecorded', musicData.dateRecorded);
-    if (musicData.notes) formData.append('notes', musicData.notes);
     
     const response = await api.post('/api/artist/music/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -219,14 +279,15 @@ export const artistAPI = {
     return response.data;
   },
 
-  // Get My Documents - matches ApiGuide.md exactly
+  // Get My Documents and Profile - aligns with controllers
   getDocuments: async (): Promise<{
     passportPhoto?: PassportPhoto;
     idDocument?: any;
     bankConfirmationLetter?: any;
     proofOfPayment?: any;
+    memberDetails?: MemberDetails;
   }> => {
-    const response = await api.get('/api/artist/documents');
+    const response = await api.get('/api/artist/documentsandprofile');
     return response.data;
   },
 
@@ -241,13 +302,56 @@ export const artistAPI = {
     return response.data;
   },
 
-  updateMusic: async (id: number, data: Partial<ArtistWork>): Promise<ArtistWork> => {
-    const response = await api.put(`/api/artist/music/${id}`, data);
+  updateMusic: async (
+    id: number,
+    existing: ArtistWork,
+    changes: Partial<ArtistWork>,
+    file: File
+  ): Promise<ArtistWork> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    // Helper to pick change value or fallback to existing
+    const pick = <K extends keyof ArtistWork>(key: K, fallback: string | number | undefined = '') => {
+      const value = (changes as any)[key] ?? (existing as any)[key] ?? fallback;
+      return value;
+    };
+
+    formData.append('title', String(pick('title')));
+    formData.append('ArtistId', String((changes as any).artistId ?? (existing as any).artistId ?? ''));
+    formData.append('albumName', String(pick('albumName')));
+    formData.append('artist', String(pick('artist')));
+    formData.append('GroupOrBandOrStageName', String((changes as any).groupOrBandOrStageName ?? (existing as any).groupOrBandOrStageName ?? ''));
+    formData.append('featuredArtist', String((changes as any).featuredArtist ?? (existing as any).featuredArtist ?? ''));
+    formData.append('producer', String((changes as any).producer ?? (existing as any).producer ?? ''));
+    formData.append('country', String(pick('country')));
+    const uploadTypeId = (changes as any).artistUploadType?.id ?? (existing as any).artistUploadType?.id;
+    const workTypeId = (changes as any).artistWorkType?.id ?? (existing as any).artistWorkType?.id;
+    if (uploadTypeId != null) formData.append('artistUploadTypeId', String(uploadTypeId));
+    if (workTypeId != null) formData.append('artistWorkTypeId', String(workTypeId));
+    // Duration has capital D in backend
+    formData.append('Duration', String((changes as any).duration ?? (existing as any).duration ?? ''));
+    formData.append('composer', String((changes as any).composer ?? (existing as any).composer ?? ''));
+    formData.append('author', String((changes as any).author ?? (existing as any).author ?? ''));
+    formData.append('arranger', String((changes as any).arranger ?? (existing as any).arranger ?? ''));
+    formData.append('publisher', String((changes as any).publisher ?? (existing as any).publisher ?? ''));
+    formData.append('publishersName', String((changes as any).publishersName ?? (existing as any).publishersName ?? ''));
+    // Note: backend expects 'publisherAdress' (single 'd')
+    formData.append('publisherAdress', String((changes as any).publisherAddress ?? (existing as any).publisherAddress ?? ''));
+    formData.append('publisherTelephone', String((changes as any).publisherTelephone ?? (existing as any).publisherTelephone ?? ''));
+    formData.append('recordedBy', String((changes as any).recordedBy ?? (existing as any).recordedBy ?? ''));
+    // Note case sensitivity per backend
+    formData.append('AddressOfRecordingCompany', String((changes as any).addressOfRecordingCompany ?? (existing as any).addressOfRecordingCompany ?? ''));
+    formData.append('labelName', String((changes as any).labelName ?? (existing as any).labelName ?? ''));
+    formData.append('dateRecorded', String((changes as any).dateRecorded ?? (existing as any).dateRecorded ?? ''));
+
+    const response = await api.put(`/api/artist2/updatemusicbyuser/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response.data;
   },
 
   deleteMusic: async (id: number): Promise<void> => {
-    await api.delete(`/api/artist/music/${id}`);
+    await api.delete(`/api/artist2/deletemusicbyuserid/${id}`);
   },
 
   getStats: async (): Promise<ArtistStats> => {
@@ -334,19 +438,6 @@ export const adminAPI = {
   // Reject Music - matches ApiGuide.md exactly
   rejectMusic: async (musicId: number, notes: string): Promise<ArtistWork> => {
     const response = await api.post(`/api/admin/music/reject/${musicId}`, { notes });
-    return response.data;
-  },
-
-  // Create Company - matches ApiGuide.md exactly
-  createCompany: async (data: {
-    email: string;
-    password: string;
-    companyName: string;
-    companyAddress: string;
-    companyPhone: string;
-    contactPerson: string;
-  }): Promise<{ company: Company; user: User }> => {
-    const response = await api.post('/api/admin/company/create', data);
     return response.data;
   },
 

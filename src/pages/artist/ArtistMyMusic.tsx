@@ -17,6 +17,7 @@ const ArtistMyMusic: React.FC = () => {
   const [editingMusic, setEditingMusic] = useState<ArtistWork | null>(null);
   const [editForm, setEditForm] = useState<Partial<ArtistWork>>({});
   const [saving, setSaving] = useState(false);
+  const [editFile, setEditFile] = useState<File | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -45,23 +46,32 @@ const ArtistMyMusic: React.FC = () => {
 
   const handleSaveEdit = async () => {
     if (!editingMusic) return;
-    
+    if (!editFile) {
+      toast({
+        title: 'File Required',
+        description: 'Please select a new audio/video file to upload',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       setSaving(true);
-      await artistAPI.updateMusic(editingMusic.id, editForm);
+      await artistAPI.updateMusic(editingMusic.id, editingMusic as any, editForm as any, editFile);
       toast({
-        title: "Music Updated",
-        description: "Your music has been updated successfully",
+        title: 'Music Updated',
+        description: 'Your music has been updated successfully',
       });
       setEditingMusic(null);
+      setEditFile(null);
       // Reload data
       const data = await artistAPI.getMyMusic().catch(() => []);
       setRows(data);
     } catch (error: any) {
       toast({
-        title: "Update Failed",
-        description: error?.response?.data?.message || "Failed to update music",
-        variant: "destructive",
+        title: 'Update Failed',
+        description: error?.response?.data?.message || 'Failed to update music',
+        variant: 'destructive',
       });
     } finally {
       setSaving(false);
@@ -197,6 +207,14 @@ const ArtistMyMusic: React.FC = () => {
                   value={editForm.duration || ''}
                   onChange={(e) => setEditForm(prev => ({ ...prev, duration: e.target.value }))}
                   placeholder="e.g., 3:45"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>New File (required)</Label>
+                <Input
+                  type="file"
+                  accept="audio/*,video/*"
+                  onChange={(e) => setEditFile(e.target.files?.[0] || null)}
                 />
               </div>
               
