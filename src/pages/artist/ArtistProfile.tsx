@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { artistAPI, lookupAPI } from '@/services/api';
 import { MemberDetails, MemberDetailsForm } from '@/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
 const ArtistProfile: React.FC = () => {
@@ -29,6 +31,8 @@ const ArtistProfile: React.FC = () => {
     bankNames: [],
   });
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [viewOpen, setViewOpen] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -117,8 +121,9 @@ const ArtistProfile: React.FC = () => {
         setIsCreating(false);
         toast({
           title: "Profile Created",
-          description: "Your profile has been created successfully!",
+          description: "Proceed to upload your documents.",
         });
+        navigate('/artist/documents');
       } else {
       const updated = await artistAPI.updateProfile(form);
       setProfile(updated);
@@ -165,6 +170,36 @@ const ArtistProfile: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+            {!isCreating && profile && (
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold">Submission Summary</h3>
+                <div className="overflow-x-auto border rounded-lg">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="text-left p-2">Name</th>
+                        <th className="text-left p-2">Email</th>
+                        <th className="text-left p-2">Phone</th>
+                        <th className="text-left p-2">Status</th>
+                        <th className="text-left p-2">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="p-2">{profile.firstName} {profile.surname}</td>
+                        <td className="p-2">{profile.email}</td>
+                        <td className="p-2">{profile.phoneNumber}</td>
+                        <td className="p-2">{profile.status?.statusName || 'PENDING'}</td>
+                        <td className="p-2 space-x-2">
+                          <Button variant="outline" size="sm" onClick={() => setViewOpen(true)}>View Profile</Button>
+                          <Button variant="outline" size="sm" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>Edit Profile</Button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
             {/* Personal Information */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Personal Information</h3>
@@ -592,13 +627,59 @@ const ArtistProfile: React.FC = () => {
               </div>
             )}
 
-            <div className="flex justify-end">
+            <div className="flex justify-between">
+              {isCreating && (
+                <Button variant="outline" onClick={() => navigate('/artist/documents')}>Next: Upload Documents</Button>
+              )}
               <Button onClick={handleSave} disabled={saving}>
                 {saving ? 'Saving...' : (isCreating ? 'Create Profile' : 'Save Changes')}
               </Button>
             </div>
           </CardContent>
         </Card>
+
+        {/* View Profile Dialog */}
+        <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Profile Preview</DialogTitle>
+            </DialogHeader>
+            {profile && (
+              <div className="space-y-4 max-h-[70vh] overflow-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>First Name</Label>
+                    <Input value={profile.firstName} disabled />
+                  </div>
+                  <div>
+                    <Label>Surname</Label>
+                    <Input value={profile.surname} disabled />
+                  </div>
+                  <div>
+                    <Label>Email</Label>
+                    <Input value={profile.email} disabled />
+                  </div>
+                  <div>
+                    <Label>Phone</Label>
+                    <Input value={profile.phoneNumber} disabled />
+                  </div>
+                  <div>
+                    <Label>Artist ID</Label>
+                    <Input value={(profile as any).ArtistId || (profile as any).artistId || '-'} disabled />
+                  </div>
+                  <div>
+                    <Label>IPI Number</Label>
+                    <Input value={(profile as any).IPI_number || (profile as any).ipiNumber || '-'} disabled />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => navigate('/artist/documents')}>View Documents</Button>
+                  <Button onClick={() => setViewOpen(false)}>Close</Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
