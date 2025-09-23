@@ -133,6 +133,67 @@ export const artistAPI = {
     return response.data;
   },
 
+  // Documents update/delete for authenticated user
+  updatePassportPhotoByUser: async (file: File, imageTitle: string): Promise<PassportPhoto> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('imageTitle', imageTitle);
+    const response = await api.put('/api/artist2/updatephotobyuser', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  deletePassportPhotoByUser: async (): Promise<{ message: string }> => {
+    const response = await api.delete('/api/artist2/deleteuserphoto');
+    return response.data;
+  },
+
+  updateProofOfPaymentByUser: async (file: File, documentTitle: string): Promise<any> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentTitle', documentTitle);
+    const response = await api.put('/api/artist2/updateproofofpayuser', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  deleteProofOfPaymentByUser: async (): Promise<{ message: string }> => {
+    const response = await api.delete('/api/artist2/deleteproofofpay');
+    return response.data;
+  },
+
+  updateBankLetterByUser: async (file: File, documentTitle: string): Promise<any> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentTitle', documentTitle);
+    const response = await api.put('/api/artist2/updatebankletteruser', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  deleteBankLetterByUser: async (): Promise<{ message: string }> => {
+    const response = await api.delete('/api/artist2/deletebankletteruser');
+    return response.data;
+  },
+
+  updateIdDocumentByUser: async (file: File, documentTitle: string): Promise<any> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentTitle', documentTitle);
+    const response = await api.put('/api/artist2/updatiddocbyuser', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  deleteIdDocumentByUser: async (): Promise<{ message: string }> => {
+    const response = await api.delete('/api/artist2/deleteuseriddoc');
+    return response.data;
+  },
+
   // Upload Passport Photo - matches ApiGuide.md exactly
   uploadPassportPhoto: async (file: File, imageTitle: string): Promise<PassportPhoto> => {
     const formData = new FormData();
