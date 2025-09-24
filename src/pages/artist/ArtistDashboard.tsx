@@ -205,6 +205,8 @@ const ArtistDashboard: React.FC = () => {
 
   const profileCompletion = getProfileCompletionPercentage();
 
+  const profileCompletion = getProfileCompletionPercentage();
+
   if (loading) {
     return (
       <DashboardLayout title="Artist Dashboard">

@@ -175,6 +175,9 @@ function DataTable<T extends Record<string, any>>({
         link.href = item.fileUrl;
         link.download = `${item.title}.${item.fileType || 'mp3'}`;
         link.click();
+        link.href = item.fileUrl;
+        link.download = `${item.title}.${item.fileType || 'mp3'}`;
+        link.click();
       } catch (error) {
         console.error('Download failed:', error);
       }
