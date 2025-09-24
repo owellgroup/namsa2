@@ -5,10 +5,24 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 import { adminAPI } from '@/services/api';
 import { ArtistWork } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, XCircle, Play, Download } from 'lucide-react';
+import { 
+  CheckCircle, 
+  XCircle, 
+  Play, 
+  Download, 
+  Eye, 
+  Music,
+  Clock,
+  User,
+  Calendar,
+  FileText
+} from 'lucide-react';
 
 const AdminPendingMusic: React.FC = () => {
   const [music, setMusic] = useState<ArtistWork[]>([]);
@@ -17,6 +31,9 @@ const AdminPendingMusic: React.FC = () => {
   const [selectedMusic, setSelectedMusic] = useState<ArtistWork | null>(null);
   const [isrcCode, setIsrcCode] = useState('');
   const [rejectionNotes, setRejectionNotes] = useState('');
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -39,8 +56,13 @@ const AdminPendingMusic: React.FC = () => {
     }
   };
 
-  const handleApprove = async (musicItem: ArtistWork) => {
-    if (!isrcCode.trim()) {
+  const handleViewMusic = (musicItem: ArtistWork) => {
+    setSelectedMusic(musicItem);
+    setViewDialogOpen(true);
+  };
+
+  const handleApprove = async () => {
+    if (!selectedMusic || !isrcCode.trim()) {
       toast({
         title: "ISRC Code Required",
         description: "Please enter an ISRC code for approval",
@@ -50,14 +72,15 @@ const AdminPendingMusic: React.FC = () => {
     }
 
     try {
-      setProcessing(musicItem.id);
-      await adminAPI.approveMusic(musicItem.id, isrcCode);
+      setProcessing(selectedMusic.id);
+      await adminAPI.approveMusic(selectedMusic.id, isrcCode);
       toast({
         title: "Music Approved",
-        description: `"${musicItem.title}" has been approved`,
+        description: `"${selectedMusic.title}" has been approved`,
       });
       setIsrcCode('');
       setSelectedMusic(null);
+      setApproveDialogOpen(false);
       loadMusic();
     } catch (error: any) {
       toast({
@@ -70,8 +93,8 @@ const AdminPendingMusic: React.FC = () => {
     }
   };
 
-  const handleReject = async (musicItem: ArtistWork) => {
-    if (!rejectionNotes.trim()) {
+  const handleReject = async () => {
+    if (!selectedMusic || !rejectionNotes.trim()) {
       toast({
         title: "Rejection Notes Required",
         description: "Please enter notes for rejection",
@@ -81,14 +104,15 @@ const AdminPendingMusic: React.FC = () => {
     }
 
     try {
-      setProcessing(musicItem.id);
-      await adminAPI.rejectMusic(musicItem.id, rejectionNotes);
+      setProcessing(selectedMusic.id);
+      await adminAPI.rejectMusic(selectedMusic.id, rejectionNotes);
       toast({
         title: "Music Rejected",
-        description: `"${musicItem.title}" has been rejected`,
+        description: `"${selectedMusic.title}" has been rejected`,
       });
       setRejectionNotes('');
       setSelectedMusic(null);
+      setRejectDialogOpen(false);
       loadMusic();
     } catch (error: any) {
       toast({
@@ -108,6 +132,17 @@ const AdminPendingMusic: React.FC = () => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'APPROVED':
+        return <Badge className="bg-namsa-success text-white"><CheckCircle className="w-3 h-3 mr-1" />APPROVED</Badge>;
+      case 'REJECTED':
+        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />REJECTED</Badge>;
+      default:
+        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />PENDING</Badge>;
+    }
   };
 
   if (loading) {
@@ -133,102 +168,257 @@ const AdminPendingMusic: React.FC = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {music.map((musicItem) => (
-              <Card key={musicItem.id} className="relative">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg truncate">
-                      {musicItem.title}
-                    </CardTitle>
-                    <Badge variant="outline" className="text-yellow-600 border-yellow-600">
-                      PENDING
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Artist</p>
-                    <p className="font-medium">{musicItem.artist || musicItem.user?.email}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Album</p>
-                    <p className="font-medium">{musicItem.albumName || 'Not specified'}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Duration</p>
-                    <p className="font-medium">{formatDuration(musicItem.duration)}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">File Type</p>
-                    <p className="font-medium">{musicItem.fileType || 'Unknown'}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Upload Date</p>
-                    <p className="font-medium">
-                      {new Date(musicItem.uploadedDate).toLocaleDateString()}
-                    </p>
-                  </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Music ({music.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-border rounded-lg">
+                  <thead>
+                    <tr className="bg-muted">
+                      <th className="border border-border p-3 text-left">Title</th>
+                      <th className="border border-border p-3 text-left">Artist</th>
+                      <th className="border border-border p-3 text-left">Album</th>
+                      <th className="border border-border p-3 text-left">Duration</th>
+                      <th className="border border-border p-3 text-left">Upload Date</th>
+                      <th className="border border-border p-3 text-left">Status</th>
+                      <th className="border border-border p-3 text-left">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {music.map((musicItem) => (
+                      <tr key={musicItem.id} className="hover:bg-muted/50">
+                        <td className="border border-border p-3 font-medium">{musicItem.title}</td>
+                        <td className="border border-border p-3">{musicItem.artist || musicItem.user?.email}</td>
+                        <td className="border border-border p-3">{musicItem.albumName || '-'}</td>
+                        <td className="border border-border p-3">{formatDuration(musicItem.duration)}</td>
+                        <td className="border border-border p-3">
+                          {new Date(musicItem.uploadedDate).toLocaleDateString()}
+                        </td>
+                        <td className="border border-border p-3">
+                          {getStatusBadge(musicItem.status?.statusName || 'PENDING')}
+                        </td>
+                        <td className="border border-border p-3">
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleViewMusic(musicItem)}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View Details
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => {
+                                setSelectedMusic(musicItem);
+                                setApproveDialogOpen(true);
+                              }}
+                              disabled={processing === musicItem.id}
+                              className="text-green-600 hover:text-green-700"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => {
+                                setSelectedMusic(musicItem);
+                                setRejectDialogOpen(true);
+                              }}
+                              disabled={processing === musicItem.id}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Reject
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-                  <div className="flex gap-2 pt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(musicItem.fileUrl, '_blank')}
-                      className="flex-1"
-                    >
-                      <Play className="h-4 w-4 mr-2" />
-                      Play
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
+        {/* View Music Details Dialog */}
+        <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+          <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Music Review</DialogTitle>
+            </DialogHeader>
+            
+            {selectedMusic && (
+              <div className="space-y-6">
+                {/* Basic Information */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Music className="h-5 w-5" />
+                    Track Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <Label>Title</Label>
+                      <Input value={selectedMusic.title} disabled />
+                    </div>
+                    <div>
+                      <Label>Artist</Label>
+                      <Input value={selectedMusic.artist || '-'} disabled />
+                    </div>
+                    <div>
+                      <Label>Album</Label>
+                      <Input value={selectedMusic.albumName || '-'} disabled />
+                    </div>
+                    <div>
+                      <Label>Duration</Label>
+                      <Input value={formatDuration(selectedMusic.duration)} disabled />
+                    </div>
+                    <div>
+                      <Label>Genre</Label>
+                      <Input value={selectedMusic.artistWorkType?.workTypeName || '-'} disabled />
+                    </div>
+                    <div>
+                      <Label>Upload Type</Label>
+                      <Input value={selectedMusic.artistUploadType?.typeName || '-'} disabled />
+                    </div>
+                    <div>
+                      <Label>Work ID</Label>
+                      <Input value={selectedMusic.workId || '-'} disabled />
+                    </div>
+                    <div>
+                      <Label>Country</Label>
+                      <Input value={selectedMusic.country || '-'} disabled />
+                    </div>
+                    <div>
+                      <Label>Upload Date</Label>
+                      <Input value={new Date(selectedMusic.uploadedDate).toLocaleDateString()} disabled />
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Artist Information */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Artist Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Uploaded By</Label>
+                      <Input value={selectedMusic.user?.email || '-'} disabled />
+                    </div>
+                    <div>
+                      <Label>Artist ID</Label>
+                      <Input value={(selectedMusic as any).artistId || (selectedMusic as any).ArtistId || '-'} disabled />
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Creative Credits */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Creative Credits</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <Label>Composer</Label>
+                      <Input value={selectedMusic.composer || '-'} disabled />
+                    </div>
+                    <div>
+                      <Label>Author</Label>
+                      <Input value={selectedMusic.author || '-'} disabled />
+                    </div>
+                    <div>
+                      <Label>Arranger</Label>
+                      <Input value={selectedMusic.arranger || '-'} disabled />
+                    </div>
+                    <div>
+                      <Label>Producer</Label>
+                      <Input value={selectedMusic.producer || '-'} disabled />
+                    </div>
+                    <div>
+                      <Label>Publisher</Label>
+                      <Input value={selectedMusic.publisher || '-'} disabled />
+                    </div>
+                    <div>
+                      <Label>Label</Label>
+                      <Input value={selectedMusic.labelName || '-'} disabled />
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* File Actions */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">File Actions</h3>
+                  <div className="flex gap-2">
+                    <Button 
                       onClick={() => {
-                        const link = document.createElement('a');
-                        link.href = musicItem.fileUrl;
-                        link.download = musicItem.title;
-                        link.click();
+                        if (selectedMusic.fileUrl) {
+                          const audio = new Audio(selectedMusic.fileUrl);
+                          audio.play().catch(console.error);
+                        }
                       }}
-                      className="flex-1"
+                      className="gap-2"
                     >
-                      <Download className="h-4 w-4 mr-2" />
+                      <Play className="h-4 w-4" />
+                      Play Track
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        if (selectedMusic.fileUrl) {
+                          const link = document.createElement('a');
+                          link.href = selectedMusic.fileUrl;
+                          link.download = selectedMusic.title;
+                          link.click();
+                        }
+                      }}
+                      className="gap-2"
+                    >
+                      <Download className="h-4 w-4" />
                       Download
                     </Button>
                   </div>
+                </div>
 
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedMusic(musicItem)}
-                      className="flex-1"
-                    >
-                      Approve
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedMusic(musicItem)}
-                      className="flex-1 text-red-600 hover:text-red-700"
-                    >
-                      Reject
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                {selectedMusic.notes && (
+                  <>
+                    <Separator />
+                    <div>
+                      <Label>Admin Notes</Label>
+                      <Textarea value={selectedMusic.notes} disabled rows={3} />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
-        {/* Approval Modal */}
-        {selectedMusic && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <Card className="w-full max-w-md">
-              <CardHeader>
-                <CardTitle>Approve Music</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
+        {/* Approve Music Dialog */}
+        <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Approve Music</DialogTitle>
+            </DialogHeader>
+            
+            {selectedMusic && (
+              <div className="space-y-4">
+                <div className="p-4 bg-muted rounded-lg">
+                  <p className="font-medium">{selectedMusic.title}</p>
+                  <p className="text-sm text-muted-foreground">by {selectedMusic.artist}</p>
+                </div>
+                
+                <div className="space-y-2">
                   <Label htmlFor="isrcCode">ISRC Code *</Label>
                   <Input
                     id="isrcCode"
@@ -238,72 +428,67 @@ const AdminPendingMusic: React.FC = () => {
                     required
                   />
                 </div>
+                
                 <div className="flex gap-2">
-                  <Button
-                    onClick={() => handleApprove(selectedMusic)}
-                    disabled={processing === selectedMusic.id}
-                    className="flex-1"
-                  >
-                    {processing === selectedMusic.id ? 'Processing...' : 'Approve'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedMusic(null);
-                      setIsrcCode('');
-                    }}
-                    className="flex-1"
-                  >
+                  <Button variant="outline" onClick={() => setApproveDialogOpen(false)} className="flex-1">
                     Cancel
                   </Button>
+                  <Button 
+                    onClick={handleApprove} 
+                    disabled={processing === selectedMusic.id || !isrcCode.trim()}
+                    className="flex-1 bg-namsa-success hover:bg-namsa-success/90"
+                  >
+                    {processing === selectedMusic.id ? 'Processing...' : 'Approve Music'}
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
-        {/* Rejection Modal */}
-        {selectedMusic && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <Card className="w-full max-w-md">
-              <CardHeader>
-                <CardTitle>Reject Music</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
+        {/* Reject Music Dialog */}
+        <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Reject Music</DialogTitle>
+            </DialogHeader>
+            
+            {selectedMusic && (
+              <div className="space-y-4">
+                <div className="p-4 bg-muted rounded-lg">
+                  <p className="font-medium">{selectedMusic.title}</p>
+                  <p className="text-sm text-muted-foreground">by {selectedMusic.artist}</p>
+                </div>
+                
+                <div className="space-y-2">
                   <Label htmlFor="rejectionNotes">Rejection Notes *</Label>
-                  <Input
+                  <Textarea
                     id="rejectionNotes"
                     value={rejectionNotes}
                     onChange={(e) => setRejectionNotes(e.target.value)}
-                    placeholder="Enter rejection reason"
+                    placeholder="Enter reason for rejection..."
+                    rows={4}
                     required
                   />
                 </div>
+                
                 <div className="flex gap-2">
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleReject(selectedMusic)}
-                    disabled={processing === selectedMusic.id}
-                    className="flex-1"
-                  >
-                    {processing === selectedMusic.id ? 'Processing...' : 'Reject'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedMusic(null);
-                      setRejectionNotes('');
-                    }}
-                    className="flex-1"
-                  >
+                  <Button variant="outline" onClick={() => setRejectDialogOpen(false)} className="flex-1">
                     Cancel
                   </Button>
+                  <Button 
+                    variant="destructive"
+                    onClick={handleReject} 
+                    disabled={processing === selectedMusic.id || !rejectionNotes.trim()}
+                    className="flex-1"
+                  >
+                    {processing === selectedMusic.id ? 'Processing...' : 'Reject Music'}
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

@@ -171,7 +171,10 @@ function DataTable<T extends Record<string, any>>({
   const handleDownload = async (item: any) => {
     if (item.fileUrl && item.title) {
       try {
-        await downloadFile(item.fileUrl, `${item.title}.${item.fileType || 'mp3'}`);
+        const link = document.createElement('a');
+        link.href = item.fileUrl;
+        link.download = `${item.title}.${item.fileType || 'mp3'}`;
+        link.click();
       } catch (error) {
         console.error('Download failed:', error);
       }

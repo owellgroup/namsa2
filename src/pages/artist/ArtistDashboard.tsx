@@ -203,6 +203,8 @@ const ArtistDashboard: React.FC = () => {
     return { step: 1, total: 3, status: 'pending' };
   };
 
+  const profileCompletion = getProfileCompletionPercentage();
+
   if (loading) {
     return (
       <DashboardLayout title="Artist Dashboard">
